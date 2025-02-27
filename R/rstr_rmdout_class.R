@@ -1,0 +1,41 @@
+# Rodent Statistics Toolbox in R (rstr)
+# Copyright (C) 2025 The Regents of the University of California
+# Creator: Shantanu H. Joshi, Department of Neurology, Ahmanson Lovelace Brain Mapping Center, UCLA
+#
+# This program is free software; you can redistribute it and/or modify it under the terms
+# of the GNU General Public License as published by the Free Software Foundation; version 2.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License version 2 for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program;
+# if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+#' R6 super class for Rmd output functionality
+#' @export
+RstrRmdOutput <-
+  R6::R6Class("RstrRmdOutput",
+              public = list(
+                #' @field outdir output directory
+                outdir = NULL,
+                #' @description initialize function
+                #' @param outdir path to the output directory
+                initialize = function(outdir = NULL){
+                  self$outdir <- outdir
+                },
+                #' @description Save results as Rmd
+                #' @param rstr_data object of type \code{RstrData}
+                #' @param rstr_model object of type \code{RstrModel}
+                save_out = function(rstr_data, rstr_model){
+
+                },
+                #' @description finalize function
+                finalize = function(){
+
+                }
+              )
+  )
+
+
+
