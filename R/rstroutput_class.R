@@ -898,3 +898,46 @@ get_voxelcoord <- function(rstr_out, rstr_data, rstr_model, outdir, nclusters){
   }
   return(voxelcoord)
 }
+
+#' Save Rstr Volumetric rmarkdown report including Rmd and the html file
+#' This function is used to save Rmd report for TBM
+#' @param outdir string specifying output directory to save the results in
+#' @param rstr_data object of type `RstrData`
+#' @param rstr_model object of type `RstrModel`
+#' @param voxelcoord list of peak voxel cluster coordinates
+#' @param var_name string specifying the variable name
+#' @param stats_string string specifying the statistical measure
+#' @export
+save_rstr_vol_rmd_html <- function(outdir, rstr_data, rstr_model, voxelcoord, var_name, stats_string){
+  
+  rmd_preamble <- readLines(system.file("extdata", "report_preamble.Rmd", package="rstr"))
+  rmd_preamble <- paste(rmd_preamble, collapse = "\n")
+  
+  rmd_text <- rmd_preamble
+  rstr_report_title_str <- paste0("## ", create_rmd_report_title_str(rstr_data, rstr_model))
+  rmd_text <- paste0(rmd_text, rstr_report_title_str, "\n\n")
+  # Display the cluster table
+  rmd_text <- paste0(rmd_text, "\n\n```{r eval=TRUE, echo=FALSE}\n")
+  rmd_text <- paste0(rmd_text, sprintf("vox_table <- read.table(file.path('%s', 'cluster.tsv'), header = F, sep = '	')\n", outdir))
+  rmd_text <- paste0(rmd_text, "\ncolnames(vox_table) <- c('Cluster Number', 'Number of Voxels',  'T-Value' , 'X Coord', 'Y Coord', 'Z Coord')\n")
+  rmd_text <- paste0(rmd_text, "\nDT::datatable(vox_table, rownames = FALSE)\n")
+  rmd_text <- paste0(rmd_text, "```\n\n")
+  
+  for (jj in seq_along(voxelcoord)) {
+    rmd_text <- paste0(rmd_text, sprintf("## Cluster %d: Voxel coordinate (%d, %d, %d)", jj, voxelcoord[[jj]][1], voxelcoord[[jj]][2], voxelcoord[[jj]][3]), " {.tabset}\n")
+    for (ii in stats_string){
+      rmd_text <- paste0(rmd_text, "\n\n", sprintf("### %s", stats_string_to_rmd_section_title[ii]), "\n")
+      rmd_text <- paste0(rmd_text, "\n",  sprintf("```{r cluster%s_%s, fig.cap=''}", jj, ii))
+      outprefix <- paste0(rstr_model@model_type, "_", var_name, '_both_hemi_', ii, sep = '_')
+      png_filename <- paste0(file.path(outdir,sprintf("cluster%s_", jj)), ii, "_figure.png")
+      rmd_text <- paste0(rmd_text, "\n", sprintf("knitr::include_graphics('%s')", png_filename))
+      rmd_text <- paste0(rmd_text, "\n```\n")
+    }
+    rmd_text <- paste0(rmd_text, "\n### {-}\n\n")
+  }
+  
+  rmd_filename <- file.path(outdir, sprintf("report_%s_%s.Rmd", rstr_model@model_type, var_name))
+  writeLines(rmd_text, rmd_filename)
+  rmarkdown::render(rmd_filename)
+  
+}
