@@ -69,6 +69,13 @@ analysis_type_list <- list(
   nca = 'nca'
 )
 
+#' Mapping of analysis_type to readable string
+rs_analysis_type_to_readable_string <- list(
+  tbm = "TBM",
+  roi = "ROI",
+  dba = "DBA"
+)
+
 rs_data_types <- list(
   surface = '.dfs',
   nifti_image = '.nii.gz'
@@ -539,4 +546,43 @@ check_bids_compatibility_and_get_filelist <- function(rstr_data, type="sba", hem
   }
   return (list("bids_compatible" = bids_compatible, "filelist" = filelist))
 
+}
+
+
+create_rmd_report_title_str <- function(rstr_data, rstr_model) {
+  
+  if(rstr_data@analysis_type == "dba") {
+    title_string <- paste(rstr:::rs_analysis_type_to_readable_string[[rstr_data@analysis_type]], " ", rstr_data@measure, " ",
+                          rstr:::rs_model_type_to_readable_string[[rstr_model@model_type]], '-- ', sep="")
+  }
+  else {
+    title_string <- paste(rstr:::rs_analysis_type_to_readable_string[[rstr_data@analysis_type]], " ",
+                          rstr:::rs_model_type_to_readable_string[[rstr_model@model_type]], '-- ', sep="")
+  }
+  
+  switch(rstr_model@model_type,
+         rstr_anova = {
+           title_string <- paste(title_string, "Main effect of", rstr_model@main_effect, "with covariates",
+                                 rstr_model@covariates)
+         },
+         rstr_lm = {
+           title_string <- paste(title_string, "Main effect of", rstr_model@main_effect, "with covariates",
+                                 rstr_model@covariates)
+         },
+         rstr_lmer = {
+           title_string <- paste(title_string, "Fixed effect of", rstr_model@main_effect, "with covariates",
+                                 rstr_model@covariates, ", Random effect of", rstr_model@group_var)
+         },
+         rstr_corr = {
+           title_string <- paste(title_string, "with", rstr_model@corr_var)
+         },
+         pairedttest = {
+           title_string <- paste(title_string, "between samples for", rstr_model@group_var)
+         },
+         unpairedttest = {
+           title_string <- paste(title_string, "between samples for", rstr_model@group_var)
+         }
+  )
+  
+  return(title_string)
 }
