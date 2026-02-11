@@ -2,6 +2,7 @@
 % Please edit documentation in R/rstr.R
 \docType{package}
 \name{rstr}
+\alias{rstr-package}
 \alias{rstr}
 \title{rstr: Rodent Statistics toolbox}
 \description{
@@ -14,4 +15,25 @@ Pearson correlation
 General linear model
 ANOVA
 Paired and Independent samples t-test
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{http://mousesuite.org/rstr}
+}
+
+}
+\author{
+\strong{Maintainer}: Shantanu Joshi \email{shjoshi@ieee.org}
+
+Authors:
+\itemize{
+  \item Yeun Kim
+}
+
+Other contributors:
+\itemize{
+  \item David Shattuck [contributor]
+}
+
 }
