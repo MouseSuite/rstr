@@ -76,6 +76,17 @@ rs_analysis_type_to_readable_string <- list(
   dba = "DBA"
 )
 
+#' Mapping of model_type to readable string
+rs_model_type_to_readable_string <- list(
+  bstr_anova = "ANOVA",
+  bstr_lm = "Linear Fixed-effects Model",
+  bstr_lmer = "Linear Mixed-effects Model",
+  bstr_corr = "Correlation",
+  pairedttest = "Paired T-test",
+  unpairedttest = "Unpaired T-test"
+)
+
+
 #' Mapping of stats measures to readable string to be used as a section title on the Rmd report
 stats_string_to_rmd_section_title <- list(
   log_pvalues_adjusted = "Adjusted P-values",

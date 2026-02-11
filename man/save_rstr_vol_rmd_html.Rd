@@ -3,7 +3,7 @@
 \name{save_rstr_vol_rmd_html}
 \alias{save_rstr_vol_rmd_html}
 \title{Save Rstr Volumetric rmarkdown report including Rmd and the html file
-This function is used to save Rmd report for TBM}
+This function is used to save Rmd report for both TBM and DBA}
 \usage{
 save_rstr_vol_rmd_html(
   outdir,
@@ -29,5 +29,5 @@ save_rstr_vol_rmd_html(
 }
 \description{
 Save Rstr Volumetric rmarkdown report including Rmd and the html file
-This function is used to save Rmd report for TBM
+This function is used to save Rmd report for both TBM and DBA
 }

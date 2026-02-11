@@ -207,9 +207,11 @@ setMethod("save_out", valueClass = "RstrTBMOutput", signature = "RstrTBMOutput",
   switch(rstr_model@model_type,
          rstr_anova = {
            var_name = rstr_model@main_effect
+           stats_string <- c("log_pvalues_adjusted", "log_pvalues", "tvalues_adjusted", "tvalues")
          },
          rstr_lm = {
            var_name = rstr_model@main_effect
+           stats_string <- c("log_pvalues_adjusted", "log_pvalues", "tvalues_adjusted", "tvalues")
          },
          rstr_corr = {
            corr_values <- rep(0, length(rstr_data@atlas_image))
@@ -221,12 +223,15 @@ setMethod("save_out", valueClass = "RstrTBMOutput", signature = "RstrTBMOutput",
            dim(corr_values_masked_adjusted) <- dim(rstr_data@atlas_image)
 
            var_name = rstr_model@corr_var
+           stats_string <- c("corr_values_masked_adjusted", "corr_values", "log_pvalues_adjusted", "log_pvalues")           
          },
          pairedttest = {
            var_name = rstr_model@group_var
+           stats_string <- c("log_pvalues_adjusted", "log_pvalues", "tvalues_adjusted", "tvalues")
          },
          unpairedttest = {
            var_name = rstr_model@group_var
+           stats_string <- c("log_pvalues_adjusted", "log_pvalues", "tvalues_adjusted", "tvalues")
          }
   )
 
@@ -252,12 +257,10 @@ setMethod("save_out", valueClass = "RstrTBMOutput", signature = "RstrTBMOutput",
     stop("No detected clusters above significance threshold.")
   }
 
-  # add create an R6 class function from here
-  rstrmd_volout <- RstrRmdVolumeOutput$new()
-  rstrmd_volout$save_out(rstr_data, rstr_model, voxelcoord = voxelcoord, outdir)
-
-
-    # Copy modelspec file to the output directory
+  render_statmap_on_atlas(outdir, rstr_data, rstr_model, var_name, stats_string, voxelcoord)
+  save_rstr_vol_rmd_html(outdir, rstr_data, rstr_model, voxelcoord, var_name, stats_string)
+  
+  # Copy modelspec file to the output directory
   file.copy(rstr_model@mspec_file, rstr_out@outdir)
   invisible(rstr_out)
   }
@@ -297,9 +300,11 @@ setMethod("save_out", valueClass = "RstrDBAOutput", signature = "RstrDBAOutput",
   switch(rstr_model@model_type,
          rstr_anova = {
            var_name = rstr_model@main_effect
+           stats_string <- c("log_pvalues_adjusted", "log_pvalues", "tvalues_adjusted", "tvalues")           
          },
          rstr_lm = {
            var_name = rstr_model@main_effect
+           stats_string <- c("log_pvalues_adjusted", "log_pvalues", "tvalues_adjusted", "tvalues")
          },
          rstr_corr = {
            corr_values <- rep(0, length(rstr_data@atlas_image))
@@ -311,12 +316,15 @@ setMethod("save_out", valueClass = "RstrDBAOutput", signature = "RstrDBAOutput",
            dim(corr_values_masked_adjusted) <- dim(rstr_data@atlas_image)
 
            var_name = rstr_model@corr_var
+           stats_string <- c("corr_values_masked_adjusted", "corr_values", "log_pvalues_adjusted", "log_pvalues")           
          },
          pairedttest = {
            var_name = rstr_model@group_var
+           stats_string <- c("log_pvalues_adjusted", "log_pvalues", "tvalues_adjusted", "tvalues")
          },
          unpairedttest = {
            var_name = rstr_model@group_var
+           stats_string <- c("log_pvalues_adjusted", "log_pvalues", "tvalues_adjusted", "tvalues")
          }
   )
 
@@ -342,11 +350,10 @@ setMethod("save_out", valueClass = "RstrDBAOutput", signature = "RstrDBAOutput",
     stop("No detected clusters above significance threshold.")
   }
 
-  # Create a new R6 class object here
-  rstrmd_volout <- RstrRmdVolumeOutput$new()
-  rstrmd_volout$save_out(rstr_data, rstr_model, voxelcoord = voxelcoord, outdir)
+  render_statmap_on_atlas(outdir, rstr_data, rstr_model, var_name, stats_string, voxelcoord)
+  save_rstr_vol_rmd_html(outdir, rstr_data, rstr_model, voxelcoord, var_name, stats_string)
 
-  # Copy modelspec file to the output directory
+    # Copy modelspec file to the output directory
   file.copy(rstr_model@mspec_file, rstr_out@outdir)
   invisible(rstr_out)
 }
@@ -900,7 +907,7 @@ get_voxelcoord <- function(rstr_out, rstr_data, rstr_model, outdir, nclusters){
 }
 
 #' Save Rstr Volumetric rmarkdown report including Rmd and the html file
-#' This function is used to save Rmd report for TBM
+#' This function is used to save Rmd report for both TBM and DBA
 #' @param outdir string specifying output directory to save the results in
 #' @param rstr_data object of type `RstrData`
 #' @param rstr_model object of type `RstrModel`

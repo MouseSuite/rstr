@@ -22,123 +22,6 @@ RstrRmdVolumeOutput <-
                   initialize(outdir)
                 },
                 save_out = function(rstr_data, rstr_model, outdir, voxelcoord) {
-                  get_custom_overlays = function(outdir) {
-                    if (rstr_model@model_type=="unpairedttest" | rstr_model@model_type=="pairedttest"){
-                      indep_var <- rstr_model@group_var
-                    } else {
-                      indep_var <- rstr_model@main_effect
-                    }
-
-                    adjp_overlay <- paste0(outdir, "/", rstr_model@model_type, "_", indep_var,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", rs_stat_overlays$log_pvalues_adjusted, rstr_data@data_type)
-                    adjt_overlay <- paste0(outdir, "/", rstr_model@model_type, "_", indep_var,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", rs_stat_overlays$tvalues_adjusted, rstr_data@data_type)
-                    p_overlay <- paste0(outdir, "/", rstr_model@model_type, "_", indep_var,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", rs_stat_overlays$log_pvalues, rstr_data@data_type)
-                    t_overlay <- paste0(outdir, "/", rstr_model@model_type, "_", indep_var,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", rs_stat_overlays$tvalues, rstr_data@data_type)
-                    corr_overlay <- paste0(outdir, "/", rstr_model@model_type, "_", rstr_model@corr_var,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", rs_stat_overlays$corr_values, rstr_data@data_type)
-                    adj_corr_overlay <- paste0(outdir, "/", rstr_model@model_type, "_", rstr_model@corr_var,"_",tools::file_path_sans_ext(
-                       basename(rstr_data@atlas_filename)),"_", rs_stat_overlays$corr_values_masked_adjusted, rstr_data@data_type)
-
-                    return(list("adjp_overlay" = adjp_overlay, "adjt_overlay" = adjt_overlay, "p_overlay" = p_overlay,
-                                "t_overlay" = t_overlay, "corr_overlay" = corr_overlay, "adj_corr_overlay" = adj_corr_overlay))
-                  }
-
-                  get_custom_lut = function(outdir) {
-                    switch(rstr_model@model_type,
-                           rstr_anova = {var_name = rstr_model@main_effect},
-                           rstr_lm = {var_name = rstr_model@main_effect},
-                           rstr_lmer = {var_name = rstr_model@main_effect},
-                           rstr_corr = {var_name = rstr_model@corr_var},
-                           pairedttest = {var_name = rstr_model@group_var},
-                           unpairedttest = {var_name = rstr_model@group_var}
-                    )
-                    adjp_lut <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", "log_pvalues_adjusted.lut")
-                    adjt_lut <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", "tvalues_adjusted.lut")
-                    p_lut <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", "log_pvalues.lut")
-                    t_lut <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", "tvalues.lut")
-                    if (rstr_model@model_type == "rstr_corr"){
-                      corr_lut <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                        basename(rstr_data@atlas_filename)),"_", "corr_values.lut")
-                      adjcorr_lut <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                        basename(rstr_data@atlas_filename)),"_", "corr_values_masked_adjusted.lut")
-                      return(list("adjp_lut" = adjp_lut, "adjt_lut" = adjt_lut, "p_lut" = p_lut, "t_lut" = t_lut,"corr_lut" = corr_lut, "adjcorr_lut" = adjcorr_lut))
-                    }
-
-                    return(list("adjp_lut" = adjp_lut, "adjt_lut" = adjt_lut, "p_lut" = p_lut, "t_lut" = t_lut))
-
-                  }
-                  get_min_vals = function(outdir) {
-                    switch(rstr_model@model_type,
-                           rstr_anova = {var_name = rstr_model@main_effect},
-                           rstr_lm = {var_name = rstr_model@main_effect},
-                           rstr_lmer = {var_name = rstr_model@main_effect},
-                           rstr_corr = {var_name = rstr_model@corr_var},
-                           pairedttest = {var_name = rstr_model@group_var},
-                           unpairedttest = {var_name = rstr_model@group_var}
-                    )
-                    adjp_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", "log_pvalues_adjusted.ini")
-                    adjp_min <- as.numeric(ini::read.ini(adjp_ini)$colormap$cnegmax)
-                    adjt_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", "tvalues_adjusted.ini")
-                    adjt_min <- as.numeric(ini::read.ini(adjt_ini)$colormap$cnegmax)
-                    p_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", "log_pvalues.ini")
-                    p_min <- as.numeric(ini::read.ini(p_ini)$colormap$cnegmax)
-                    t_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", "tvalues.ini")
-                    t_min <- as.numeric(ini::read.ini(t_ini)$colormap$cnegmax)
-                    if (rstr_model@model_type == "rstr_corr"){
-                      corr_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                        basename(rstr_data@atlas_filename)),"_", "corr_values.ini")
-                      corr_min <- as.numeric(ini::read.ini(corr_ini)$colormap$cnegmax)
-                      adjcorr_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                        basename(rstr_data@atlas_filename)),"_", "corr_values_masked_adjusted.ini")
-                      adjcorr_min <- as.numeric(ini::read.ini(adjcorr_ini)$colormap$cnegmax)
-                      return(c(adjp_min,adjt_min,p_min,t_min,corr_min,adjcorr_min))
-                    }
-                    return(c(adjp_min,adjt_min,p_min,t_min))
-                  }
-                  get_max_vals = function(outdir) {
-                    switch(rstr_model@model_type,
-                           rstr_anova = {var_name = rstr_model@main_effect},
-                           rstr_lm = {var_name = rstr_model@main_effect},
-                           rstr_lmer = {var_name = rstr_model@main_effect},
-                           rstr_corr = {var_name = rstr_model@corr_var},
-                           pairedttest = {var_name = rstr_model@group_var},
-                           unpairedttest = {var_name = rstr_model@group_var}
-                    )
-                    adjp_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", "log_pvalues_adjusted.ini")
-                    adjp_max <- as.numeric(ini::read.ini(adjp_ini)$colormap$cposmax)
-                    adjt_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", "tvalues_adjusted.ini")
-                    adjt_max <- as.numeric(ini::read.ini(adjt_ini)$colormap$cposmax)
-                    p_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", "log_pvalues.ini")
-                    p_max <- as.numeric(ini::read.ini(p_ini)$colormap$cposmax)
-                    t_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                      basename(rstr_data@atlas_filename)),"_", "tvalues.ini")
-                    t_max <- as.numeric(ini::read.ini(t_ini)$colormap$cposmax)
-                    if (rstr_model@model_type == "rstr_corr"){
-                      corr_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                        basename(rstr_data@atlas_filename)),"_", "corr_values.ini")
-                      corr_max <- as.numeric(ini::read.ini(corr_ini)$colormap$cposmax)
-                      adjcorr_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
-                        basename(rstr_data@atlas_filename)),"_", "corr_values_masked_adjusted.ini")
-                      adjcorr_max <- as.numeric(ini::read.ini(adjcorr_ini)$colormap$cposmax)
-                      return(c(adjp_max,adjt_max,p_max,t_max,corr_max,adjcorr_max))
-                    }
-                    return(c(adjp_max,adjt_max,p_max,t_max))
-                  }
-
 
                   #create a folder to store png images in
                   dir.create(paste0(outdir,"/png_images"))
@@ -454,3 +337,123 @@ RstrRmdVolumeOutput <-
               )
   )
 
+
+get_custom_overlays = function(outdir) {
+  if (rstr_model@model_type=="unpairedttest" | rstr_model@model_type=="pairedttest"){
+    indep_var <- rstr_model@group_var
+  } else {
+    indep_var <- rstr_model@main_effect
+  }
+  
+  adjp_overlay <- paste0(outdir, "/", rstr_model@model_type, "_", indep_var,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", rs_stat_overlays$log_pvalues_adjusted, rstr_data@data_type)
+  adjt_overlay <- paste0(outdir, "/", rstr_model@model_type, "_", indep_var,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", rs_stat_overlays$tvalues_adjusted, rstr_data@data_type)
+  p_overlay <- paste0(outdir, "/", rstr_model@model_type, "_", indep_var,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", rs_stat_overlays$log_pvalues, rstr_data@data_type)
+  t_overlay <- paste0(outdir, "/", rstr_model@model_type, "_", indep_var,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", rs_stat_overlays$tvalues, rstr_data@data_type)
+  corr_overlay <- paste0(outdir, "/", rstr_model@model_type, "_", rstr_model@corr_var,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", rs_stat_overlays$corr_values, rstr_data@data_type)
+  adj_corr_overlay <- paste0(outdir, "/", rstr_model@model_type, "_", rstr_model@corr_var,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", rs_stat_overlays$corr_values_masked_adjusted, rstr_data@data_type)
+  
+  return(list("adjp_overlay" = adjp_overlay, "adjt_overlay" = adjt_overlay, "p_overlay" = p_overlay,
+              "t_overlay" = t_overlay, "corr_overlay" = corr_overlay, "adj_corr_overlay" = adj_corr_overlay))
+}
+
+get_custom_lut = function(outdir) {
+  switch(rstr_model@model_type,
+         rstr_anova = {var_name = rstr_model@main_effect},
+         rstr_lm = {var_name = rstr_model@main_effect},
+         rstr_lmer = {var_name = rstr_model@main_effect},
+         rstr_corr = {var_name = rstr_model@corr_var},
+         pairedttest = {var_name = rstr_model@group_var},
+         unpairedttest = {var_name = rstr_model@group_var}
+  )
+  adjp_lut <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", "log_pvalues_adjusted.lut")
+  adjt_lut <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", "tvalues_adjusted.lut")
+  p_lut <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", "log_pvalues.lut")
+  t_lut <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", "tvalues.lut")
+  if (rstr_model@model_type == "rstr_corr"){
+    corr_lut <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+      basename(rstr_data@atlas_filename)),"_", "corr_values.lut")
+    adjcorr_lut <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+      basename(rstr_data@atlas_filename)),"_", "corr_values_masked_adjusted.lut")
+    return(list("adjp_lut" = adjp_lut, "adjt_lut" = adjt_lut, "p_lut" = p_lut, "t_lut" = t_lut,"corr_lut" = corr_lut, "adjcorr_lut" = adjcorr_lut))
+  }
+  
+  return(list("adjp_lut" = adjp_lut, "adjt_lut" = adjt_lut, "p_lut" = p_lut, "t_lut" = t_lut))
+  
+}
+
+get_min_vals = function(outdir) {
+  switch(rstr_model@model_type,
+         rstr_anova = {var_name = rstr_model@main_effect},
+         rstr_lm = {var_name = rstr_model@main_effect},
+         rstr_lmer = {var_name = rstr_model@main_effect},
+         rstr_corr = {var_name = rstr_model@corr_var},
+         pairedttest = {var_name = rstr_model@group_var},
+         unpairedttest = {var_name = rstr_model@group_var}
+  )
+  adjp_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", "log_pvalues_adjusted.ini")
+  adjp_min <- as.numeric(ini::read.ini(adjp_ini)$colormap$cnegmax)
+  adjt_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", "tvalues_adjusted.ini")
+  adjt_min <- as.numeric(ini::read.ini(adjt_ini)$colormap$cnegmax)
+  p_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", "log_pvalues.ini")
+  p_min <- as.numeric(ini::read.ini(p_ini)$colormap$cnegmax)
+  t_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", "tvalues.ini")
+  t_min <- as.numeric(ini::read.ini(t_ini)$colormap$cnegmax)
+  if (rstr_model@model_type == "rstr_corr"){
+    corr_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+      basename(rstr_data@atlas_filename)),"_", "corr_values.ini")
+    corr_min <- as.numeric(ini::read.ini(corr_ini)$colormap$cnegmax)
+    adjcorr_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+      basename(rstr_data@atlas_filename)),"_", "corr_values_masked_adjusted.ini")
+    adjcorr_min <- as.numeric(ini::read.ini(adjcorr_ini)$colormap$cnegmax)
+    return(c(adjp_min,adjt_min,p_min,t_min,corr_min,adjcorr_min))
+  }
+  return(c(adjp_min,adjt_min,p_min,t_min))
+}
+
+
+get_max_vals = function(outdir) {
+  switch(rstr_model@model_type,
+         rstr_anova = {var_name = rstr_model@main_effect},
+         rstr_lm = {var_name = rstr_model@main_effect},
+         rstr_lmer = {var_name = rstr_model@main_effect},
+         rstr_corr = {var_name = rstr_model@corr_var},
+         pairedttest = {var_name = rstr_model@group_var},
+         unpairedttest = {var_name = rstr_model@group_var}
+  )
+  adjp_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", "log_pvalues_adjusted.ini")
+  adjp_max <- as.numeric(ini::read.ini(adjp_ini)$colormap$cposmax)
+  adjt_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", "tvalues_adjusted.ini")
+  adjt_max <- as.numeric(ini::read.ini(adjt_ini)$colormap$cposmax)
+  p_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", "log_pvalues.ini")
+  p_max <- as.numeric(ini::read.ini(p_ini)$colormap$cposmax)
+  t_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+    basename(rstr_data@atlas_filename)),"_", "tvalues.ini")
+  t_max <- as.numeric(ini::read.ini(t_ini)$colormap$cposmax)
+  if (rstr_model@model_type == "rstr_corr"){
+    corr_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+      basename(rstr_data@atlas_filename)),"_", "corr_values.ini")
+    corr_max <- as.numeric(ini::read.ini(corr_ini)$colormap$cposmax)
+    adjcorr_ini <- paste0(outdir, "/", rstr_model@model_type, "_", var_name,"_",tools::file_path_sans_ext(
+      basename(rstr_data@atlas_filename)),"_", "corr_values_masked_adjusted.ini")
+    adjcorr_max <- as.numeric(ini::read.ini(adjcorr_ini)$colormap$cposmax)
+    return(c(adjp_max,adjt_max,p_max,t_max,corr_max,adjcorr_max))
+  }
+  return(c(adjp_max,adjt_max,p_max,t_max))
+}
