@@ -1,7 +1,7 @@
 Package: rstr
 Type: Package
 Title: Rodent Statistics Toolbox in R
-Version: 0.5.1
+Version: 0.5.2
 Authors@R: c(person(given="Shantanu", family="Joshi", role=c("cre","aut"), email="shjoshi@ieee.org"),
              person("Yeun", "Kim", role="aut"),
              person("David", "Shattuck", role="ctb")
@@ -18,12 +18,12 @@ Imports: iterators, magrittr, gtable, htmlwidgets, jsonlite (>= 1.6),
         pander (>= 0.6.0), rmarkdown (>= 1.3.0), DT (>= 0.2.0), ini,
         tools, RColorBrewer, RNifti, methods, ggplot2 (>= 2.2.1),
         scales (>= 0.4.1), doParallel, foreach, bit, Matrix, R6,
-        shinyjs, lme4
+        shinyjs, lme4, magick
 RoxygenNote: 7.3.3
 URL: http://mousesuite.org/rstr
 Suggests: testthat
 NeedsCompilation: no
-Packaged: Mon Feb 24 01:33:39 AM UTC 2025 shattuck
+Packaged: Wed Feb 11 08:24:46 PM UTC 2026 shjoshi
 Author: Shantanu Joshi [cre, aut],
   Yeun Kim [aut],
   David Shattuck [ctb]
