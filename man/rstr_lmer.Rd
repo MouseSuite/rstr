@@ -7,6 +7,7 @@
 rstr_lmer(
   group_var,
   main_effect = "",
+  time_effect = "",
   covariates = "",
   rstr_data,
   mult_comp = "fdr"
@@ -19,6 +20,8 @@ with \code{rstr_data}.}
 \item{main_effect}{Character string containing an independent variable whose effect you want to measure.
 It could be disease status, age, gender etc. This should strictly be a single variable. This can be
 either a categorical or a continuous variable.}
+
+\item{time_effect}{Character string denoting the time effect variable}
 
 \item{covariates}{Character string containing a set of other predictors (variables) in the model. If more than
 one covariates are included, they should be separated by a \code{+} operator similar to an R formula.}

@@ -646,19 +646,24 @@ rstr_p_adjust <- function(pvalues, method='fdr') {
 #' @param main_effect Character string containing an independent variable whose effect you want to measure.
 #' It could be disease status, age, gender etc. This should strictly be a single variable. This can be
 #' either a categorical or a continuous variable.
+#' @param time_effect Character string denoting the time effect variable
 #' @param covariates Character string containing a set of other predictors (variables) in the model. If more than
 #' one covariates are included, they should be separated by a \code{+} operator similar to an R formula.
 #' @param  rstr_data Object of type \code{\link{RstrData}}
 #' @param  mult_comp method for multiple comparisons correction. The default method is "fdr". See \code{\link{rstr_p_adjust}} for valid values.
 #'
 #' @export
-rstr_lmer <- function(group_var, main_effect="", covariates="", rstr_data, mult_comp = "fdr") {
+rstr_lmer <- function(group_var, main_effect="", time_effect ="", covariates="", rstr_data, mult_comp = "fdr") {
   
   if (class(rstr_data) == "RstrROIData") {
-    return(rstr_roi_lmer_anova(group_var, main_effect = main_effect, covariates = covariates, rstr_data = rstr_data))
+    return(rstr_roi_lmer_anova(group_var, time_effect = "", main_effect = main_effect, covariates = covariates, rstr_data = rstr_data))
   }
   message('Running the statistical model. This may take a while...', appendLF = FALSE)
-  rstr_model <- lmer_vec(group_var, main_effect = main_effect, covariates = covariates, rstr_data = rstr_data)
+  rstr_lmer_full <- lmer_vox(group_var, main_effect = main_effect, time_effect = time_effect, covariates = covariates, rstr_data = rstr_data)
+  rstr_model <- rstr_lmer_full
+  #rstr_lm_null <- lmer_vox(group_var, main_effect = "", covariates = covariates, rstr_data = rstr_data)
+  #rstr_model <- anova_vec(rstr_lm_full, rstr_lm_null, rstr_data)
+  
   # switch(mult_comp,
   #        perm={
   #          cl <- parallel::makeCluster(parallel::detectCores())
@@ -745,10 +750,66 @@ lmer_vec <- function(group_var, main_effect = "", covariates = "", rstr_data) {
   return(rstr_model)
 }
 
+#' This function performs voxelwise ANOVA Linear Mixed Effects analysis using lmer
+#'
+#' @param group_var Categorical variable name. This should be present in the demographics csv file associated
+#' with \code{rstr_data}.
+#' @param time_effect Character string denoting the time effect variable
+#' @param main_effect Character string containing an independent variable whose effect you want to measure.
+#' It could be disease status, age, gender etc. This should strictly be a single variable. This can be
+#' either a categorical or a continuous variable.
+#' @param covariates Character string containing a set of other predictors (variables) in the model. If more than
+#' one covariates are included, they should be separated by a \code{+} operator similar to an R formula.
+#' @param  rstr_data Object of type \code{\link{RstrData}}
+#'
+#' @export
+lmer_vox <- function(group_var, main_effect = "", time_effect = "", covariates = "", rstr_data) {
+
+  rstr_model <- new("RstrModel", model_type="rstr_lmer", main_effect = main_effect, time_effect = time_effect, covariates = covariates,
+                    group_var = group_var, demographics = rstr_data@demographics, mspec_file="")
+  
+  Nsubjects <- dim(rstr_data@data_array)[1]
+  Nvoxels <- dim(rstr_data@data_array)[2]
+  
+  fixed <- paste(c(time_effect, main_effect), collapse = " * ")
+  random <- sprintf("(1 | %s)", group_var)
+  
+  rstr_lmer_full_formula <- reformulate(c(fixed, covariates, random), response = "y_vox")
+  print(rstr_lmer_full_formula)
+  
+  # Setup an initial model fit 
+  rstr_data@demographics$y_vox <- rstr_data@data_array[, 1]
+  full_model <- lmerTest::lmer(rstr_lmer_full_formula, data = rstr_data@demographics)
+  df <- coef(summary(full_model))[, "df"]  
+
+  temp_vec <- matrix(NA, length(df), Nvoxels, dimnames = list(names(df), NULL))
+  beta_coeff <- temp_vec
+  tval       <- temp_vec
+  pval       <- temp_vec
+  rm(temp_vec)
+  
+  terms_to_save <- time_effect
+  # TODO: Change all data structures so multiple terms are returned
+  
+  for (ii in 1:Nvoxels){
+    modfit  <- lme4::refit(full_model, newresp = rstr_data@data_array[, ii])
+    coef_summary <- coef(summary(modfit))
+    beta_coeff[, ii] <- coef_summary[terms_to_save, "Estimate"]
+    tval[, ii] <- coef_summary[terms_to_save, "t value"]
+    pval[, ii] <- 2 * pt(abs(coef_summary[terms_to_save, "t value"]), df, lower.tail = FALSE)
+  }
+  
+  rstr_model@pvalues <- as.numeric(pval)
+  rstr_model@tvalues <- as.numeric(tval)
+  rstr_model@beta_coeff <- beta_coeff
+  return (rstr_model)
+}
+
 #' This function performs the ANOVA Linear Mixed Effects analysis for ROIs
 #'
 #' @param group_var Categorical variable name. This should be present in the demographics csv file associated
 #' with \code{rstr_data}.
+#' @param time_effect Character string denoting the time effect variable
 #' @param main_effect Character string containing an independent variable whose effect you want to measure.
 #' It could be disease status, age, gender etc. This should strictly be a single variable. This can be
 #' either a categorical or a continuous variable.
@@ -758,7 +819,7 @@ lmer_vec <- function(group_var, main_effect = "", covariates = "", rstr_data) {
 #'
 #' @export
 
-rstr_roi_lmer_anova <- function(group_var, main_effect="", covariates="", rstr_data){
+rstr_roi_lmer_anova <- function(group_var, time_effect = "", main_effect="", covariates="", rstr_data){
   
   rstr_model <- new("RstrModel", model_type="rstr_lmer", main_effect = main_effect, covariates = covariates,
                     group_var = group_var, demographics = rstr_data@demographics, mspec_file="")

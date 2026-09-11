@@ -17,6 +17,8 @@ S4 class for representing the statistical model
 It could be disease status, age, gender etc. This should strictly be a single variable. This can be
 either a categorical or a continuous variable.}
 
+\item{\code{time_effect}}{Character string denoting the time effect variable}
+
 \item{\code{covariates}}{character string containing a set of other predictors (variables) in the model. If more than
 one covariates are included, they should be separated by a \code{+} operator similar to an R formula.}
 

@@ -18,6 +18,7 @@
 #' @slot main_effect character string containing an independent variable whose effect you want to measure.
 #' It could be disease status, age, gender etc. This should strictly be a single variable. This can be
 #' either a categorical or a continuous variable.
+#' @slot time_effect Character string denoting the time effect variable
 #' @slot covariates character string containing a set of other predictors (variables) in the model. If more than
 #' one covariates are included, they should be separated by a \code{+} operator similar to an R formula.
 #' @slot corr_var character variable name. This should be present in the demographics csv file associated
@@ -60,6 +61,7 @@ RstrModel <- setClass(
   slots = list(
     mspec_file = "character",
     main_effect = "character",
+    time_effect = "character",
     covariates = "character",
     corr_var = "character",
     corr_values = "numeric",
@@ -133,7 +135,6 @@ parse_lm <- function(main_effect="", covariates="", corr_var="", group_var = "",
 #' @param model_type string designating the type of model
 #' @param demographics data frame of the demographics
 #'
-
 parse_model <- function(main_effect="", covariates="", corr_var="", group_var = "", model_type="", demographics) {
   
   if (! model_type %in% model_type_list) {
@@ -205,11 +206,12 @@ parse_model <- function(main_effect="", covariates="", corr_var="", group_var = 
   }
   
   # TODO: Validate covariates
+  # TODO: Pass and validate time_effect
 }
 
 # TODO: Call read_modelspec from within initialize
 setMethod("initialize", valueClass = "RstrModel", signature = "RstrModel",
-          function(.Object, model_type, main_effect="", covariates="", corr_var="", group_var="", mult_comp="", demographics, mspec_file) {
+          function(.Object, model_type, main_effect="", time_effect="", covariates="", corr_var="", group_var="", mult_comp="", demographics, mspec_file) {
             
             if (model_type == "rstr_lm" || model_type == "rstr_anova")
               parse_model_result <- parse_lm(main_effect, covariates, corr_var, group_var, model_type, demographics)
@@ -217,6 +219,7 @@ setMethod("initialize", valueClass = "RstrModel", signature = "RstrModel",
               parse_model_result <- parse_model(main_effect, covariates, corr_var, group_var, model_type, demographics)
             
             .Object@main_effect <- main_effect
+            .Object@main_effect <- time_effect
             .Object@covariates <- covariates
             .Object@corr_var <- corr_var
             .Object@group_var <- group_var
