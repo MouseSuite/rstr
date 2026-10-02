@@ -664,7 +664,7 @@ rstr_lmer <- function(group_var, main_effect="", time_effect ="", covariates="",
   #rstr_lm_null <- lmer_vox(group_var, main_effect = "", covariates = covariates, rstr_data = rstr_data)
   #rstr_model <- anova_vec(rstr_lm_full, rstr_lm_null, rstr_data)
   
-  # switch(mult_comp,
+  switch(mult_comp,
   #        perm={
   #          cl <- parallel::makeCluster(parallel::detectCores())
   #          registerDoParallel(cl)
@@ -681,15 +681,15 @@ rstr_lmer <- function(group_var, main_effect="", time_effect ="", covariates="",
   #          stopCluster(cl)
   #          options(warn=0)
   #        },
-  #        fdr={
-  #          rstr_model@pvalues[is.nan(rstr_model@pvalues)] <- 1
-  #          rstr_model@pvalues <- rstr_model@pvalues*rstr_model@tvalues_sign
-  #          #rstr_model@tvalues[abs(rstr_model@pvalues) >= 0.05] <- 0
-  #          rstr_model@pvalues_adjusted <- rstr_p_adjust(rstr_model@pvalues, mult_comp)
-  #          rstr_model@tvalues_adjusted <- rstr_model@tvalues
-  #          rstr_model@tvalues_adjusted[abs(rstr_model@pvalues_adjusted) >= 0.05] <- 0
-  #        }
-  # )
+          fdr={
+            rstr_model@pvalues[is.nan(rstr_model@pvalues)] <- 1
+            rstr_model@pvalues <- rstr_model@pvalues*rstr_model@tvalues_sign
+            rstr_model@tvalues[abs(rstr_model@pvalues) >= 0.05] <- 0
+            rstr_model@pvalues_adjusted <- rstr_p_adjust(rstr_model@pvalues, mult_comp)*rstr_model@tvalues_sign
+            rstr_model@tvalues_adjusted <- rstr_model@tvalues
+            rstr_model@tvalues_adjusted[abs(rstr_model@pvalues_adjusted) >= 0.05] <- 0
+          }
+  )
   
   message('Done.')
   return(rstr_model)
@@ -773,34 +773,45 @@ lmer_vox <- function(group_var, main_effect = "", time_effect = "", covariates =
   
   fixed <- paste(c(time_effect, main_effect), collapse = " * ")
   random <- sprintf("(1 | %s)", group_var)
+
+  if (covariates == "")
+    rstr_lmer_full_formula <- reformulate(c(fixed, random), response = "y_vox")
+  else
+    rstr_lmer_full_formula <- reformulate(c(fixed, covariates, random), response = "y_vox")
   
-  rstr_lmer_full_formula <- reformulate(c(fixed, covariates, random), response = "y_vox")
   print(rstr_lmer_full_formula)
   
   # Setup an initial model fit 
   rstr_data@demographics$y_vox <- rstr_data@data_array[, 1]
-  full_model <- lmerTest::lmer(rstr_lmer_full_formula, data = rstr_data@demographics)
-  df <- coef(summary(full_model))[, "df"]  
+  full_model <- lmerTest::lmer(rstr_lmer_full_formula, data = rstr_data@demographics,
+                               control = lme4::lmerControl(check.conv.singular = "ignore"))
+  terms_to_save <- grep(":", rownames(coef(summary(full_model))), value = TRUE)  
+  degf <- coef(summary(full_model))[terms_to_save, "df"]  
 
-  temp_vec <- matrix(NA, length(df), Nvoxels, dimnames = list(names(df), NULL))
-  beta_coeff <- temp_vec
+  temp_vec <- numeric(Nvoxels)
+  beta_coeff <- matrix(0, nrow(coef(summary(full_model))), Nvoxels, dimnames = list(names(df), NULL))
   tval       <- temp_vec
   pval       <- temp_vec
   rm(temp_vec)
   
-  terms_to_save <- time_effect
+  
+  rstr_model@interaction_effect <- terms_to_save # This string contains the colon operator
   # TODO: Change all data structures so multiple terms are returned
   
+  progress_bar <- txtProgressBar(min = 0, max = 100, style = 3)
   for (ii in 1:Nvoxels){
-    modfit  <- lme4::refit(full_model, newresp = rstr_data@data_array[, ii])
+    modfit  <- lme4::refit(full_model, newresp = rstr_data@data_array[, ii], control = lme4::lmerControl(check.conv.singular = "ignore"))
     coef_summary <- coef(summary(modfit))
-    beta_coeff[, ii] <- coef_summary[terms_to_save, "Estimate"]
-    tval[, ii] <- coef_summary[terms_to_save, "t value"]
-    pval[, ii] <- 2 * pt(abs(coef_summary[terms_to_save, "t value"]), df, lower.tail = FALSE)
+    beta_coeff[, ii] <- coef_summary[, "Estimate"]
+    tval[ii] <- coef_summary[terms_to_save, "t value"]
+    pval[ii] <- 2 * pt(abs(coef_summary[terms_to_save, "t value"]), degf, lower.tail = FALSE)
+    setTxtProgressBar(progress_bar, floor(100 * ii / Nvoxels))
   }
+  close(progress_bar)
   
   rstr_model@pvalues <- as.numeric(pval)
   rstr_model@tvalues <- as.numeric(tval)
+  rstr_model@tvalues_sign <- sign_tvalues(rstr_model@tvalues)
   rstr_model@beta_coeff <- beta_coeff
   return (rstr_model)
 }
