@@ -67,7 +67,8 @@ RstrSBAData <- setClass(
                atlas_filename_rh = "character",
                atlas_surface = 'list',
                atlas_surface_lh = 'list',
-               atlas_surface_rh = 'list'),
+               atlas_surface_rh = 'list',
+               mask_idx = 'vector'),
   contains = "RstrData"
 )
 
@@ -311,8 +312,10 @@ load_rstr_data <- function(type="sba", subjdir="", csv="", hemi="left",
   
   switch(type,
          sba = { rstr_data <- load_sba_data_both_hemi(subjdir=subjdir, csv=csv, hemi=hemi, smooth = smooth, atlas=atlas, exclude_col=exclude_col) },
-         tbm = { rstr_data <- load_tbm_data(subjdir=subjdir, csv=csv, smooth=smooth, atlas=atlas, maskfile=maskfile, exclude_col=exclude_col) },
-         dba = { rstr_data <- load_dba_data(subjdir=subjdir, csv=csv, measure=measure, smooth=smooth, atlas=atlas, maskfile=maskfile, eddy=eddy, exclude_col=exclude_col) },
+         tbm = { rstr_data <- load_tbm_data(subjdir=subjdir, csv=csv, smooth=smooth, atlas=atlas, maskfile=maskfile, exclude_col=exclude_col) 
+                 rstr_data <- mask_low_var_voxels(rstr_data)},
+         dba = { rstr_data <- load_dba_data(subjdir=subjdir, csv=csv, measure=measure, smooth=smooth, atlas=atlas, maskfile=maskfile, eddy=eddy, exclude_col=exclude_col) 
+                 rstr_data <- mask_low_var_voxels(rstr_data)},
          roi = { rstr_data <- load_roi_data(subjdir, csv, roiids, roimeas, exclude_col=exclude_col, roistat_fileprefix=roistat_fileprefix, roilabeldescfile=roilabeldescfile) }
   )
   return(rstr_data)
@@ -352,7 +355,8 @@ load_rstr_data_from_filelist <- function(csv="", subjdir="", hemi = "left", type
   #  rstr_sba_data <- new("RstrSBAData", subjdir=subjdir, csv=csv, exclude_col="")
   
   switch(type,
-         tbm = { rstr_data <- load_tbm_data_from_filelist(subjdir = subjdir, csv = csv, file_col = file_col, atlas = atlas, maskfile = maskfile) },
+         tbm = { rstr_data <- load_tbm_data_from_filelist(subjdir = subjdir, csv = csv, file_col = file_col, atlas = atlas, maskfile = maskfile) 
+                 rstr_data <- mask_low_var_voxels(rstr_data)},
          sba = { rstr_data <- load_sba_data_from_filelist(subjdir=subjdir, csv=csv, hemi = hemi, file_col = file_col, atlas=atlas) }
   )
   return(rstr_data)
@@ -807,3 +811,27 @@ file_copy <- function(src_filelist, dest_filelist, messg="Copying ", progress = 
     file.copy(src_filelist, dest_filelist)
 }
 
+
+#' Mask near constant voxels or voxels with low variance
+#' @param rstr_data RstrData
+mask_low_var_voxels <- function(rstr_data) {
+
+  message("Mask near constant voxels or voxels with low variance")
+  var_vox <- apply(rstr_data@data_array, 2, var)
+  var_pos <- var_vox[is.finite(var_vox) & var_vox > 0]
+  
+  if (length(var_pos) == 0) {
+    stop("No voxels with non-zero variance - check that data_array is scans x voxels", call. = FALSE)
+  }
+  
+  var_tol     <- 1e-6 * median(var_pos) # Use 1e-6 is the scale factor
+  idx_to_keep <- is.finite(var_vox) & var_vox > var_tol
+  stopifnot(!anyNA(idx_to_keep), any(idx_to_keep))
+  
+  rstr_data@data_array <- rstr_data@data_array[, idx_to_keep, drop = FALSE]
+  rstr_data@mask_idx   <- rstr_data@mask_idx[idx_to_keep]
+  cat(sprintf("Dropped %d, kept %d voxels (tol = %.3g)\n",
+              sum(!idx_to_keep), ncol(rstr_data@data_array), var_tol))  
+  
+  return(rstr_data)
+}
