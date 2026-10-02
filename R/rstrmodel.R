@@ -19,6 +19,7 @@
 #' It could be disease status, age, gender etc. This should strictly be a single variable. This can be
 #' either a categorical or a continuous variable.
 #' @slot time_effect Character string denoting the time effect variable
+#' @slot interaction_effect Character string denoting the time effect variable
 #' @slot covariates character string containing a set of other predictors (variables) in the model. If more than
 #' one covariates are included, they should be separated by a \code{+} operator similar to an R formula.
 #' @slot corr_var character variable name. This should be present in the demographics csv file associated
@@ -62,6 +63,7 @@ RstrModel <- setClass(
     mspec_file = "character",
     main_effect = "character",
     time_effect = "character",
+    interaction_effect = "character",    
     covariates = "character",
     corr_var = "character",
     corr_values = "numeric",
@@ -149,8 +151,8 @@ parse_model <- function(main_effect="", covariates="", corr_var="", group_var = 
   if (main_effect_present & covariates_present & corr_var_present & group_var_present)
     stop('Only the main effect and covariates or corr_var or group_var should be specified separately.', call. = FALSE)
   
-  if ( (main_effect_present & !covariates_present) | (covariates_present & !main_effect_present) )
-    stop('main_effect and covariates should be specified together.', call. = FALSE)
+  if (covariates_present & !main_effect_present)
+    stop('Main effect was not specified.', call. = FALSE)
   
   if (!main_effect_present & !covariates_present & !corr_var_present & !group_var_present)
     stop('Either the main effect and covariates or corr_var or group_var should be specified.', call. = FALSE)
@@ -206,7 +208,7 @@ parse_model <- function(main_effect="", covariates="", corr_var="", group_var = 
   }
   
   # TODO: Validate covariates
-  # TODO: Pass and validate time_effect
+  # TODO: Pass and validate time_effect and interaction_effect
 }
 
 # TODO: Call read_modelspec from within initialize
@@ -219,7 +221,8 @@ setMethod("initialize", valueClass = "RstrModel", signature = "RstrModel",
               parse_model_result <- parse_model(main_effect, covariates, corr_var, group_var, model_type, demographics)
             
             .Object@main_effect <- main_effect
-            .Object@main_effect <- time_effect
+            .Object@time_effect <- time_effect
+            .Object@interaction_effect <- "" # This gets populated by rstr_lmer
             .Object@covariates <- covariates
             .Object@corr_var <- corr_var
             .Object@group_var <- group_var
