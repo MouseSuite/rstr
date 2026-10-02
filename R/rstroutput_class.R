@@ -213,6 +213,10 @@ setMethod("save_out", valueClass = "RstrTBMOutput", signature = "RstrTBMOutput",
            var_name = rstr_model@main_effect
            stats_string <- c("log_pvalues_adjusted", "log_pvalues", "tvalues_adjusted", "tvalues")
          },
+         rstr_lmer = {
+           var_name = gsub(":", "_x_", rstr_model@interaction_effect) # Convert the colon operator to "_x_" for file names 
+           stats_string <- c("log_pvalues_adjusted", "log_pvalues", "tvalues_adjusted", "tvalues")
+         },
          rstr_corr = {
            corr_values <- rep(0, length(rstr_data@atlas_image))
            corr_values[rstr_data@mask_idx] <- rstr_model@corr_values
@@ -254,7 +258,8 @@ setMethod("save_out", valueClass = "RstrTBMOutput", signature = "RstrTBMOutput",
     cat("No detected clusters above significance threshold.")
     sink()
     rmarkdown::render(file.path(outdir,  sprintf("report_%s_%s.Rmd", rstr_model@model_type, var_name)))
-    stop("No detected clusters above significance threshold.")
+    message("No detected clusters above significance threshold.")
+    return(invisible(rstr_out))
   }
 
   render_statmap_on_atlas(outdir, rstr_data, rstr_model, var_name, stats_string, voxelcoord)
@@ -347,13 +352,14 @@ setMethod("save_out", valueClass = "RstrDBAOutput", signature = "RstrDBAOutput",
     cat("No detected clusters above significance threshold.")
     sink()
     rmarkdown::render(file.path(outdir,  sprintf("report_%s_%s.Rmd", rstr_model@model_type, var_name)))
-    stop("No detected clusters above significance threshold.")
+    message("No detected clusters above significance threshold.")
+    return(invisible(rstr_out))
   }
 
   render_statmap_on_atlas(outdir, rstr_data, rstr_model, var_name, stats_string, voxelcoord)
   save_rstr_vol_rmd_html(outdir, rstr_data, rstr_model, voxelcoord, var_name, stats_string)
 
-    # Copy modelspec file to the output directory
+  # Copy modelspec file to the output directory
   file.copy(rstr_model@mspec_file, rstr_out@outdir)
   invisible(rstr_out)
 }
@@ -564,7 +570,7 @@ paste0(as.character(get_roi_tag(read_label_desc(rstr_data@roilabeldescfile),rstr
                                                                                                pairedttest = {rstr_model@group_var},
                                                                                                rstr_anova = {rstr_model@main_effect},
                                                                                                rstr_lm = {rstr_model@main_effect},
-                                                                                               rstr_lmer = {rstr_model@main_effect}))))
+                                                                                               rstr_lmer = {gsub(":", "_x_", rstr_model@interaction_effect)}))))
   if (rstr_model@model_type == 'rstr_corr'){
     writeLines(c(nb_header, nb_libraries, nb_data_header_one, nb_data_command_one,
                  nb_load_data, nb_data_header_two, nb_data_command_two,
@@ -585,14 +591,14 @@ paste0(as.character(get_roi_tag(read_label_desc(rstr_data@roilabeldescfile),rstr
                                                                                                pairedttest = {rstr_model@group_var},
                                                                                                rstr_anova = {rstr_model@main_effect},
                                                                                                rstr_lm = {rstr_model@main_effect},
-                                                                                               rstr_lmer = {rstr_model@main_effect}))),
+                                                                                               rstr_lmer = {gsub(":", "_x_", rstr_model@interaction_effect)}))),
                     output_file=file.path(outdir, sprintf("report_%s_%s.html", rstr_model@model_type, switch(rstr_model@model_type,
                                                                                                            rstr_corr = {rstr_model@corr_var},
                                                                                                            unpairedttest = {rstr_model@group_var},
                                                                                                            pairedttest = {rstr_model@group_var},
                                                                                                            rstr_anova = {rstr_model@main_effect},
                                                                                                            rstr_lm = {rstr_model@main_effect},
-                                                                                                           rstr_lmer = {rstr_model@main_effect}))), quiet = TRUE)
+                                                                                                           rstr_lmer = {gsub(":", "_x_", rstr_model@interaction_effect)}))), quiet = TRUE)
 
   # Copy modelspec file to the output directory
   file.copy(rstr_model@mspec_file, rstr_out@outdir)
@@ -854,7 +860,7 @@ get_voxelcoord <- function(rstr_out, rstr_data, rstr_model, outdir, nclusters){
   switch(rstr_model@model_type,
          rstr_anova = {var_name = rstr_model@main_effect},
          rstr_lm = {var_name = rstr_model@main_effect},
-         rstr_lmer = {var_name = rstr_model@main_effect},
+         rstr_lmer = {var_name = gsub(":", "_x_", rstr_model@interaction_effect)},
          rstr_corr = {var_name = rstr_model@corr_var},
          pairedttest = {var_name = rstr_model@group_var},
          unpairedttest = {var_name = rstr_model@group_var}
