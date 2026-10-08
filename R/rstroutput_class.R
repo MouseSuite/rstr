@@ -187,6 +187,18 @@ setMethod("save_out", valueClass = "RstrTBMOutput", signature = "RstrTBMOutput",
     }
   }
 
+  if (length(rstr_data@low_var_idx_dropped) > 0) {
+    # If low-variance voxels were included, create and save a new mask file based on the excluded voxels. 
+    # Save it to the output directory. And set the rstr_data@maskfile to the new maskfile location.
+    mask_image <- RNifti::readNifti(rstr_data@maskfile)
+    new_mask_image <- array(0L, dim = dim(mask_image)[1:3])
+    new_mask_image[rstr_data@mask_idx] <- 1L
+    new_mask_filename <- file.path(rstr_out@outdir, paste0("new_mask_", basename(rstr_data@maskfile)))
+    RNifti::writeNifti(new_mask_image, new_mask_filename, template = mask_image, datatype = "uint8")
+    cat("Saved new mask image", new_mask_filename, "\n")
+    rstr_data@maskfile <- new_mask_filename
+  }
+  
   log_pvalues <- rep(1, length(rstr_data@atlas_image))
   log_pvalues[rstr_data@mask_idx] <- log10_transform(rstr_model@pvalues)
   dim(log_pvalues) <- dim(rstr_data@atlas_image)
@@ -627,6 +639,7 @@ save_rstr_out <- function(rstr_data, rstr_model, outdir="", overwrite = F, nclus
          roi = { rstr_out <- new("RstrROIOutput", outdir) }
   )
   if (rstr_data@analysis_type == "tbm" | rstr_data@analysis_type == "dba"){
+    
     rstr_out <- save_out(rstr_out, rstr_data, rstr_model, overwrite = overwrite, nclusters = nclusters)
     invisible(rstr_out)
   # } else if (rstr_data@analysis_type == "sba") {

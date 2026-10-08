@@ -68,7 +68,8 @@ RstrSBAData <- setClass(
                atlas_surface = 'list',
                atlas_surface_lh = 'list',
                atlas_surface_rh = 'list',
-               mask_idx = 'vector'),
+               mask_idx = 'vector',
+               low_var_idx_dropped = 'vector'),
   contains = "RstrData"
 )
 
@@ -79,7 +80,8 @@ RstrTBMData <- setClass(
   slots = list(atlas_filename = "character",
                atlas_image = 'niftiImage',
                maskfile = 'character',
-               mask_idx = 'vector'),
+               mask_idx = 'vector',
+               low_var_idx_dropped = 'vector'),
   contains = "RstrData"
 )
 
@@ -88,7 +90,8 @@ RstrDBAData <- setClass(
   slots = list(atlas_filename = "character",
                atlas_image = 'niftiImage',
                maskfile = 'character',
-               mask_idx = 'vector'),
+               mask_idx = 'vector',
+               low_var_idx_dropped = 'vector'),
   contains = "RstrData"
 )
 
@@ -829,9 +832,10 @@ mask_low_var_voxels <- function(rstr_data) {
   stopifnot(!anyNA(idx_to_keep), any(idx_to_keep))
   
   rstr_data@data_array <- rstr_data@data_array[, idx_to_keep, drop = FALSE]
+  rstr_data@low_var_idx_dropped <- rstr_data@mask_idx[!idx_to_keep]
   rstr_data@mask_idx   <- rstr_data@mask_idx[idx_to_keep]
   cat(sprintf("Dropped %d, kept %d voxels (tol = %.3g)\n",
               sum(!idx_to_keep), ncol(rstr_data@data_array), var_tol))  
-  
+
   return(rstr_data)
 }

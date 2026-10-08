@@ -791,7 +791,7 @@ lmer_vox <- function(group_var, main_effect = "", time_effect = "", covariates =
   temp_vec <- numeric(Nvoxels)
   beta_coeff <- matrix(0, nrow(coef(summary(full_model))), Nvoxels, dimnames = list(names(df), NULL))
   tval       <- temp_vec
-  pval       <- temp_vec
+  pval       <- temp_vec + 1 # Initialize all p values to 1
   rm(temp_vec)
   
   
