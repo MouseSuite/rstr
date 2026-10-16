@@ -771,7 +771,13 @@ lmer_vox <- function(group_var, main_effect = "", time_effect = "", covariates =
   Nsubjects <- dim(rstr_data@data_array)[1]
   Nvoxels <- dim(rstr_data@data_array)[2]
   
-  fixed <- paste(c(time_effect, main_effect), collapse = " * ")
+  if (time_effect == "") {
+    fixed <- main_effect
+  }
+  else {
+    fixed <- paste(c(time_effect, main_effect), collapse = " * ")    
+  }
+
   random <- sprintf("(1 | %s)", group_var)
 
   if (covariates == "")
@@ -785,7 +791,12 @@ lmer_vox <- function(group_var, main_effect = "", time_effect = "", covariates =
   rstr_data@demographics$y_vox <- rstr_data@data_array[, 1]
   full_model <- lmerTest::lmer(rstr_lmer_full_formula, data = rstr_data@demographics,
                                control = lme4::lmerControl(check.conv.singular = "ignore"))
-  terms_to_save <- grep(":", rownames(coef(summary(full_model))), value = TRUE)  
+  if (time_effect == "") {
+    terms_to_save <- main_effect
+  }
+  else {
+    terms_to_save <- grep(":", rownames(coef(summary(full_model))), value = TRUE)  
+  }
   degf <- coef(summary(full_model))[terms_to_save, "df"]  
 
   temp_vec <- numeric(Nvoxels)
