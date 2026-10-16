@@ -591,8 +591,8 @@ create_rmd_report_title_str <- function(rstr_data, rstr_model) {
                                  rstr_model@covariates)
          },
          rstr_lmer = {
-           title_string <- paste(title_string, "Fixed effect of", rstr_model@main_effect, "with covariates",
-                                 rstr_model@covariates, ", Random effect of", rstr_model@group_var)
+           title_string <- paste0(title_string, "Linear Mixed-effect of ", rstr_model@main_effect, " and interaction effect of ", 
+                                 rstr_model@main_effect, " and ", rstr_model@time_effect, ". Random effect of ", rstr_model@group_var, ".")
          },
          rstr_corr = {
            title_string <- paste(title_string, "with", rstr_model@corr_var)

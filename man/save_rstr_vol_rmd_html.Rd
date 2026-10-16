@@ -9,7 +9,7 @@ save_rstr_vol_rmd_html(
   outdir,
   rstr_data,
   rstr_model,
-  voxelcoord,
+  voxelcoord_status,
   var_name,
   stats_string
 )
@@ -21,7 +21,7 @@ save_rstr_vol_rmd_html(
 
 \item{rstr_model}{object of type `RstrModel`}
 
-\item{voxelcoord}{list of peak voxel cluster coordinates}
+\item{voxelcoord_status}{list of voxelcoords (peak voxel cluster coordinates) and the status whether adjusted, unadjusted, or nofindings flags are set}
 
 \item{var_name}{string specifying the variable name}
 

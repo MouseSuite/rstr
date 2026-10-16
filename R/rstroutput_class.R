@@ -258,24 +258,24 @@ setMethod("save_out", valueClass = "RstrTBMOutput", signature = "RstrTBMOutput",
     save_vol_stats_out(log_pvalues, log_pvalues_adjusted, tvalues, tvalues_adjusted, var_name, rstr_data, rstr_model, outdir)
   }
 
-  voxelcoord <- get_voxelcoord(rstr_out, rstr_data, rstr_model, outdir, nclusters)
-
-  # Check if voxelcoord is empty
-  if (length(voxelcoord) == 0 | voxelcoord[[1]][1] == -1) {
+  voxelcoord_status <- get_voxelcoord(rstr_out, rstr_data, rstr_model, outdir, nclusters)
+  voxelcoord <- voxelcoord_status$voxelcoord
+  if (voxelcoord_status$status$nofindings == TRUE) {
     sink(file.path(outdir,  sprintf("report_%s_%s.Rmd", rstr_model@model_type, var_name)), type = "output")
     cat("---\n")
     cat("title: RSTR Report\n")
     cat("output: html_document\n")
     cat("---\n\n\n")
-    cat("No detected clusters above significance threshold.")
+    cat("No detected clusters above significance threshold either for adjusted or unadujsted results.")
     sink()
     rmarkdown::render(file.path(outdir,  sprintf("report_%s_%s.Rmd", rstr_model@model_type, var_name)))
-    message("No detected clusters above significance threshold.")
-    return(invisible(rstr_out))
+    message("No detected clusters above significance threshold either for adjusted or unadujsted results.")
+    return(invisible(rstr_out))    
   }
 
+  #At this point, either adjusted_cluster.tsv or unadjusted_cluster.tsv is saved.
   render_statmap_on_atlas(outdir, rstr_data, rstr_model, var_name, stats_string, voxelcoord)
-  save_rstr_vol_rmd_html(outdir, rstr_data, rstr_model, voxelcoord, var_name, stats_string)
+  save_rstr_vol_rmd_html(outdir, rstr_data, rstr_model, voxelcoord_status, var_name, stats_string)
   
   # Copy modelspec file to the output directory
   file.copy(rstr_model@mspec_file, rstr_out@outdir)
@@ -352,7 +352,7 @@ setMethod("save_out", valueClass = "RstrDBAOutput", signature = "RstrDBAOutput",
     save_vol_stats_out(log_pvalues, log_pvalues_adjusted, tvalues, tvalues_adjusted, var_name, rstr_data, rstr_model, outdir)
   }
 
-  voxelcoord <- get_voxelcoord(rstr_out, rstr_data, rstr_model, outdir, nclusters)
+  voxelcoord_status <- get_voxelcoord(rstr_out, rstr_data, rstr_model, outdir, nclusters)
 
   # Check if voxelcoord is empty
   if (length(voxelcoord) == 0 | voxelcoord[[1]][1] == -1) {
@@ -870,6 +870,7 @@ save_vol_stats_out <- function(log_pvalues, log_pvalues_adjusted, tvalues, tvalu
 
 get_voxelcoord <- function(rstr_out, rstr_data, rstr_model, outdir, nclusters){
   # Call cluster code from terminal
+  voxelcoord <- list()
   switch(rstr_model@model_type,
          rstr_anova = {var_name = rstr_model@main_effect},
          rstr_lm = {var_name = rstr_model@main_effect},
@@ -888,41 +889,46 @@ get_voxelcoord <- function(rstr_out, rstr_data, rstr_model, outdir, nclusters){
   }
 
   voxelcoord_call <- paste0("\"",file.path(get_brainsuite_install_path(),rs_binary_files$clustermap),"\" -i \"", outdir,"/",rstr_model@model_type,
-                            "_",var_name,"_", tools::file_path_sans_ext(basename(rstr_data@atlas_filename)), "_", file_suffix_adjusted, ".nii.gz\""," -m \"", rstr_data@maskfile, "\" -o \"", outdir, "/cluster.tsv\"", " -n ", nclusters)
-
-  # voxelcoord_call <- paste0("\"",file.path(get_brainsuite_install_path(),rs_binary_files$clustermap),"\" -i \"", outdir,"/",rstr_model@model_type,
-  #                           "_",var_name,"_", tools::file_path_sans_ext(basename(rstr_data@atlas_filename)),
-  #                           "_tvalues_adjusted.nii.gz\""," -m \"", rstr_data@maskfile, "\" -o \"", outdir, "/cluster.tsv\"", " -n ", nclusters)
+                            "_",var_name,"_", tools::file_path_sans_ext(basename(rstr_data@atlas_filename)), "_", file_suffix_adjusted, ".nii.gz\""," -m \"", rstr_data@maskfile, "\" -o \"", outdir, "/adjusted_cluster.tsv\"", " -n ", nclusters)
   system(voxelcoord_call,intern=FALSE, ignore.stdout=FALSE, ignore.stderr=FALSE, wait=TRUE, input=NULL)
-  if(file.info(paste0(outdir, "/cluster.tsv"))$size!=0){
-    vox_table <- read.table(paste0(outdir,"/cluster.tsv"),header=F,sep="\t")
+  if(file.info(paste0(outdir, "/adjusted_cluster.tsv"))$size!=0){
+    vox_table <- read.table(paste0(outdir,"/adjusted_cluster.tsv"),header=F,sep="\t")
     voxelcoord <- vector("list",nrow(vox_table))
     for (individ_vox in 1:nrow(vox_table)){
       for (vox_component in 1:3){
         voxelcoord[[individ_vox]]<- c(voxelcoord[[individ_vox]],vox_table[individ_vox,3+vox_component])
       }
     }
+    adjusted = TRUE
+    unadjusted = TRUE
+    nofindings = FALSE    
   }
   # Use tvalues instead of adjusted tvalues if no clusters are found
-  if (file.info(paste0(outdir, "/cluster.tsv"))$size==0){
+  if (file.info(paste0(outdir, "/adjusted_cluster.tsv"))$size==0){
     voxelcoord_call <- paste0("\"",file.path(get_brainsuite_install_path(),rs_binary_files$clustermap),"\" -i \"", outdir,"/",rstr_model@model_type,
-                              "_",var_name,"_", tools::file_path_sans_ext(basename(rstr_data@atlas_filename)), "_", file_suffix_adjusted, ".nii.gz\""," -m \"", rstr_data@maskfile, "\" -o \"", outdir, "/cluster.tsv\"", " -n ", nclusters)
-
-#    voxelcoord_call <- paste0("\"",file.path(get_brainsuite_install_path(),rs_binary_files$clustermap),"\" -i \"", outdir,"/",rstr_model@model_type,
-#                              "_",var_name,"_", tools::file_path_sans_ext(basename(rstr_data@atlas_filename)), "_tvalues.nii.gz\"",
-#                              " -m \"", rstr_data@maskfile, "\" -o \"", outdir, "/cluster.tsv\"", " -n ", nclusters)
+                              "_",var_name,"_", tools::file_path_sans_ext(basename(rstr_data@atlas_filename)), "_", file_suffix, ".nii.gz\""," -m \"", rstr_data@maskfile, "\" -o \"", outdir, "/unadjusted_cluster.tsv\"", " -n ", nclusters)
     system(voxelcoord_call,intern=FALSE, ignore.stdout=FALSE, ignore.stderr=FALSE, wait=TRUE, input=NULL)
-    if(file.info(paste0(outdir, "/cluster.tsv"))$size!=0){
-      vox_table <- read.table(paste0(outdir,"/cluster.tsv"),header=F,sep="\t")
+    if(file.info(paste0(outdir, "/unadjusted_cluster.tsv"))$size!=0){
+      vox_table <- read.table(paste0(outdir,"/unadjusted_cluster.tsv"),header=F,sep="\t")
       voxelcoord <- vector("list",nrow(vox_table))
       for (individ_vox in 1:nrow(vox_table)){
         for (vox_component in 1:3){
           voxelcoord[[individ_vox]]<- c(voxelcoord[[individ_vox]],vox_table[individ_vox,3+vox_component])
         }
       }
-    } else {voxelcoord <- list(-1)}
+      adjusted = FALSE
+      unadjusted = TRUE
+      nofindings = FALSE
+    } else {
+      voxelcoord <- list(-1)
+      adjusted = FALSE
+      unadjusted = FALSE
+      nofindings = TRUE
+    }
   }
-  return(voxelcoord)
+  
+  voxelcoordstatus <- list(voxelcoord = voxelcoord, status = list(adjusted=adjusted, unadjusted=unadjusted, nofindings=nofindings))
+  return(voxelcoordstatus)  
 }
 
 #' Save Rstr Volumetric rmarkdown report including Rmd and the html file
@@ -930,11 +936,11 @@ get_voxelcoord <- function(rstr_out, rstr_data, rstr_model, outdir, nclusters){
 #' @param outdir string specifying output directory to save the results in
 #' @param rstr_data object of type `RstrData`
 #' @param rstr_model object of type `RstrModel`
-#' @param voxelcoord list of peak voxel cluster coordinates
+#' @param voxelcoord_status list of voxelcoords (peak voxel cluster coordinates) and the status whether adjusted, unadjusted, or nofindings flags are set
 #' @param var_name string specifying the variable name
 #' @param stats_string string specifying the statistical measure
 #' @export
-save_rstr_vol_rmd_html <- function(outdir, rstr_data, rstr_model, voxelcoord, var_name, stats_string){
+save_rstr_vol_rmd_html <- function(outdir, rstr_data, rstr_model, voxelcoord_status, var_name, stats_string){
   
   rmd_preamble <- readLines(system.file("extdata", "report_preamble.Rmd", package="rstr"))
   rmd_preamble <- paste(rmd_preamble, collapse = "\n")
@@ -942,9 +948,20 @@ save_rstr_vol_rmd_html <- function(outdir, rstr_data, rstr_model, voxelcoord, va
   rmd_text <- rmd_preamble
   rstr_report_title_str <- paste0("## ", create_rmd_report_title_str(rstr_data, rstr_model))
   rmd_text <- paste0(rmd_text, rstr_report_title_str, "\n\n")
+  if(voxelcoord_status$status$adjusted == TRUE) {
+    clusterfile <- "adjusted_cluster.tsv"
+    rmd_text <- paste0(rmd_text, "Cluster visualization of corrected results\n\n")
+    
+  } else if(voxelcoord_status$status$unadjusted == TRUE) {
+    clusterfile <- "unadjusted_cluster.tsv"
+    rmd_text <- paste0(rmd_text, "### Cluster visualization of uncorrected results\n\n")
+    stats_string <- c("log_pvalues", "tvalues")
+  }
+  voxelcoord <- voxelcoord_status$voxelcoord
+  
   # Display the cluster table
   rmd_text <- paste0(rmd_text, "\n\n```{r eval=TRUE, echo=FALSE}\n")
-  rmd_text <- paste0(rmd_text, sprintf("vox_table <- read.table(file.path('%s', 'cluster.tsv'), header = F, sep = '	')\n", outdir))
+  rmd_text <- paste0(rmd_text, sprintf("vox_table <- read.table(file.path('%s', '%s'), header = F, sep = '	')\n", outdir, clusterfile))
   rmd_text <- paste0(rmd_text, "\ncolnames(vox_table) <- c('Cluster Number', 'Number of Voxels',  'T-Value' , 'X Coord', 'Y Coord', 'Z Coord')\n")
   rmd_text <- paste0(rmd_text, "\nDT::datatable(vox_table, rownames = FALSE)\n")
   rmd_text <- paste0(rmd_text, "```\n\n")
