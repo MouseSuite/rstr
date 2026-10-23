@@ -791,11 +791,12 @@ lmer_vox <- function(group_var, main_effect = "", time_effect = "", covariates =
   rstr_data@demographics$y_vox <- rstr_data@data_array[, 1]
   full_model <- lmerTest::lmer(rstr_lmer_full_formula, data = rstr_data@demographics,
                                control = lme4::lmerControl(check.conv.singular = "ignore"))
-  if (time_effect == "") {
+  if (!nzchar(time_effect)) {
     terms_to_save <- main_effect
   }
-  else {
+  else if (nzchar(time_effect) && nzchar(main_effect)) { # Treat this as an interaction
     terms_to_save <- grep(":", rownames(coef(summary(full_model))), value = TRUE)  
+    rstr_model@interaction_effect <- terms_to_save
   }
   degf <- coef(summary(full_model))[terms_to_save, "df"]  
 
@@ -805,8 +806,6 @@ lmer_vox <- function(group_var, main_effect = "", time_effect = "", covariates =
   pval       <- temp_vec + 1 # Initialize all p values to 1
   rm(temp_vec)
   
-  
-  rstr_model@interaction_effect <- terms_to_save # This string contains the colon operator
   # TODO: Change all data structures so multiple terms are returned
   
   progress_bar <- txtProgressBar(min = 0, max = 100, style = 3)
